@@ -9,6 +9,7 @@ const { homedir } = require("os");
 const path = require("path");
 
 const DEFAULT_DOCKER_TAG = "0.2.6-rust-1.39.0";
+const DEFAULT_DOCKER_IMAGE = "softprops/lambda-rust";
 const RUST_RUNTIME = "rust";
 const BASE_RUNTIME = "provided";
 const NO_OUTPUT_CAPTURE = { stdio: ["ignore", process.stdout, process.stderr] };
@@ -36,7 +37,8 @@ class RustPlugin {
     this.custom = Object.assign(
       {
         cargoFlags: "",
-        dockerTag: DEFAULT_DOCKER_TAG
+        dockerTag: DEFAULT_DOCKER_TAG,
+        dockerImage: DEFAULT_DOCKER_IMAGE
       },
       (this.serverless.service.custom && this.serverless.service.custom.rust) ||
         {}
@@ -65,14 +67,18 @@ class RustPlugin {
 
   buildInDocker({ funcArgs, cargoPackage, binary, profile }) {
     const dockerTag = (funcArgs || {}).dockerTag || this.custom.dockerTag;
-    return spawnSync(
-      "docker",
-      [
-        ...this.getDockerArgs({ funcArgs, cargoPackage, binary, profile }),
-        `softprops/lambda-rust:${dockerTag}`
-      ],
-      NO_OUTPUT_CAPTURE
+    const dockerImage = (funcArgs || {}).dockerImage || this.custom.dockerImage;
+
+    const finalArgs = [
+      ...this.getDockerArgs({ funcArgs, cargoPackage, binary, profile })
+      `${dockerImage}:${dockerTag}`
+    ].filter(i => i);
+
+    this.serverless.cli.log(
+      `Running container build with: ${dockerCLI}, args: ${finalArgs}.`
     );
+
+    return spawnSync(dockerCLI, finalArgs, NO_OUTPUT_CAPTURE);
   }
 
   buildFromShell({ funcArgs, cargoPackage, binary, profile }) {
@@ -90,13 +96,13 @@ class RustPlugin {
 
   getDockerArgs({ funcArgs, cargoPackage, binary, profile }) {
     const cargoHome = process.env.CARGO_HOME || path.join(homedir(), ".cargo");
-    const cargoRegistry = path.join(cargoHome, "registry");
-    const cargoDownloads = path.join(cargoHome, "git");
+    const cargoRegistry = path.join(cargoHome, 'registry');
+    const cargoDownloads = path.join(cargoHome, 'git');
     const args = [
-      "run",
-      "--rm",
-      "-t",
-      "-e",
+      'run',
+      '--rm',
+      '-t',
+      '-e',
       `BIN=${binary}`,
       `-v`,
       `${this.servicePath}:/code`,
@@ -107,7 +113,7 @@ class RustPlugin {
     ];
     const cargoFlags = this.getCargoFlags(funcArgs, cargoPackage);
     if (cargoFlags) {
-      // --features awesome-feature, ect
+      // --features awesome-feature, etc
       args.push("-e", `CARGO_FLAGS=${cargoFlags}`);
     }
     if (profile) {
