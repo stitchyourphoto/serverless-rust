@@ -14,9 +14,13 @@ jobs:
         run: npm test
   integration-test:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_WORKFLOW: true
     steps:
       - name: Checkout
         uses: actions/checkout@v1
+      - name: Rust MUSL Builder
+        uses: juankaram/rust-musl-action@v1.0.0
       - name: Test
         run: tests/test.sh
   publish:
