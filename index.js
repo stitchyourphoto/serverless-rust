@@ -29,7 +29,7 @@ class RustPlugin {
     this.servicePath = this.serverless.config.servicePath || "";
     this.hooks = {
       "before:package:createDeploymentArtifacts": this.build.bind(this),
-      "before:deploy:function:packageFunction": this.build.bind(this)
+      "before:deploy:function:packageFunction": this.build.bind(this),
     };
     if (includeInvokeHook(serverless.version)) {
       this.hooks["before:invoke:local:invoke"] = this.build.bind(this);
@@ -38,7 +38,7 @@ class RustPlugin {
       {
         cargoFlags: "",
         dockerTag: DEFAULT_DOCKER_TAG,
-        dockerImage: DEFAULT_DOCKER_IMAGE
+        dockerImage: DEFAULT_DOCKER_IMAGE,
       },
       (this.serverless.service.custom && this.serverless.service.custom.rust) ||
         {}
@@ -57,7 +57,7 @@ class RustPlugin {
     cargoPackage,
     binary,
     profile,
-    dockerless
+    dockerless,
   }) {
     if (dockerless) {
       return this.buildFromShell({ funcArgs, cargoPackage, binary, profile });
@@ -66,13 +66,15 @@ class RustPlugin {
   }
 
   buildInDocker({ funcArgs, cargoPackage, binary, profile }) {
+    const dockerCLI = process.env["SLS_DOCKER_CLI"] || "docker";
+
     const dockerTag = (funcArgs || {}).dockerTag || this.custom.dockerTag;
     const dockerImage = (funcArgs || {}).dockerImage || this.custom.dockerImage;
 
     const finalArgs = [
-      ...this.getDockerArgs({ funcArgs, cargoPackage, binary, profile })
-      `${dockerImage}:${dockerTag}`
-    ].filter(i => i);
+      ...this.getDockerArgs({ funcArgs, cargoPackage, binary, profile }),
+      `${dockerImage}:${dockerTag}`,
+    ].filter((i) => i);
 
     this.serverless.cli.log(
       `Running container build with: ${dockerCLI}, args: ${finalArgs}.`
@@ -91,25 +93,27 @@ class RustPlugin {
       buildCommand.unshift(`PROFILE=${profile}`);
     }
 
+    this.serverless.cli.log(`Running cargo with command: ${buildCommand}.`);
+
     return execSync(`${buildCommand.join(" ")}`);
   }
 
   getDockerArgs({ funcArgs, cargoPackage, binary, profile }) {
-    const cargoHome = process.env.CARGO_HOME || path.join(homedir(), ".cargo");
-    const cargoRegistry = path.join(cargoHome, 'registry');
-    const cargoDownloads = path.join(cargoHome, 'git');
+    const cargoHome = process.env.CARGO_HOME || path.join(homedir(), `.cargo`);
+    const cargoRegistry = path.join(cargoHome, `registry`);
+    const cargoDownloads = path.join(cargoHome, `git`);
     const args = [
-      'run',
-      '--rm',
-      '-t',
-      '-e',
+      `run`,
+      `--rm`,
+      `-t`,
+      `-e`,
       `BIN=${binary}`,
       `-v`,
       `${this.servicePath}:/code`,
       `-v`,
       `${cargoRegistry}:/root/.cargo/registry`,
       `-v`,
-      `${cargoDownloads}:/root/.cargo/git`
+      `${cargoDownloads}:/root/.cargo/git`,
     ];
     const cargoFlags = this.getCargoFlags(funcArgs, cargoPackage);
     if (cargoFlags) {
@@ -150,7 +154,7 @@ class RustPlugin {
       return;
     }
     let rustFunctionsFound = false;
-    this.functions().forEach(funcName => {
+    this.functions().forEach((funcName) => {
       const func = service.getFunction(funcName);
       const runtime = func.runtime || service.provider.runtime;
       if (runtime != RUST_RUNTIME) {
@@ -169,7 +173,7 @@ class RustPlugin {
         cargoPackage,
         binary,
         profile,
-        dockerless: this.custom.dockerless
+        dockerless: this.custom.dockerless,
       });
       if (res.error || res.status > 0) {
         this.serverless.cli.log(
