@@ -22,7 +22,7 @@ jobs:
       - name: Rust MUSL Builder
         run: |
           rustup target add x86_64-unknown-linux-musl
-          apt-get install -y musl-tools
+          sudo apt-get install -y musl-tools
       - name: Test
         run: tests/test.sh
   publish:
