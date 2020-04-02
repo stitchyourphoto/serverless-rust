@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Rust MUSL Builder
-        uses: davidgraeff/rust-musl-action@master
+        run: rustup target add x86_64-unknown-linux-musl
       - name: Test
         run: tests/test.sh
   publish:
